@@ -71,7 +71,7 @@ class DummyVecEnv(VecEnv):
             self._save_obs(env_idx, obs)
         return (self._obs_from_buf(), np.copy(self.buf_rews), np.copy(self.buf_dones), deepcopy(self.buf_infos))
 
-    def reset(self) -> VecEnvObs:
+    def reset(self, seed: int | None = None, options: dict[str, Any] | None = None) -> VecEnvObs:
         for env_idx in range(self.num_envs):
             maybe_options = {"options": self._options[env_idx]} if self._options[env_idx] else {}
             obs, self.reset_infos[env_idx] = self.envs[env_idx].reset(seed=self._seeds[env_idx], **maybe_options)
