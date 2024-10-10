@@ -284,6 +284,9 @@ class OnPolicyAlgorithm(BaseAlgorithm):
         assert self.ep_success_buffer is not None
 
         time_elapsed = max((time.time_ns() - self.start_time) / 1e9, sys.float_info.epsilon)
+        time_remaining = (
+            time_elapsed / iteration * (self._total_timesteps / (self.n_steps * self.n_envs)) - time_elapsed
+        ) / 60
         fps = int((self.num_timesteps - self._num_timesteps_at_start) / time_elapsed)
         self.logger.record("time/iterations", iteration, exclude="tensorboard")
         if len(self.ep_info_buffer) > 0 and len(self.ep_info_buffer[0]) > 0:
@@ -291,6 +294,7 @@ class OnPolicyAlgorithm(BaseAlgorithm):
             self.logger.record("rollout/ep_len_mean", safe_mean([ep_info["l"] for ep_info in self.ep_info_buffer]))
         self.logger.record("time/fps", fps)
         self.logger.record("time/time_elapsed", int(time_elapsed), exclude="tensorboard")
+        self.logger.record("time/time_remaining", time_remaining, exclude="tensorboard")
         self.logger.record("time/total_timesteps", self.num_timesteps, exclude="tensorboard")
         if len(self.ep_success_buffer) > 0:
             self.logger.record("rollout/success_rate", safe_mean(self.ep_success_buffer))
