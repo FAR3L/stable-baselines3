@@ -35,6 +35,9 @@ Notes
     which is the equivalent to the inverse of reward scale in the original SAC paper.
     The main reason is that it avoids having too high errors when updating the Q functions.
 
+.. note::
+    When automatically adjusting the temperature (alpha/entropy coefficient), we optimize the logarithm of the entropy coefficient instead of the entropy coefficient itself. This is consistent with the original implementation and has proven to be more stable
+    (see issues `GH#36 <https://github.com/DLR-RM/stable-baselines3/issues/36>`_, `#55 <https://github.com/araffin/sbx/issues/55>`_ and others).
 
 .. note::
 
@@ -88,6 +91,15 @@ This example is only to demonstrate the use of the library and its functions, an
       obs, reward, terminated, truncated, info = env.step(action)
       if terminated or truncated:
           obs, info = env.reset()
+
+
+.. note::
+
+  Using gSDE (Generalized State-Dependent Exploration) during inference (see `PR #1767 <https://github.com/DLR-RM/stable-baselines3/pull/1767>`_):
+
+  When using SAC models trained with ``use_sde=True``, the automatic noise resetting that occurs during training (controlled by ``sde_sample_freq``) does not happen when using ``model.predict()`` for inference. This results in deterministic behavior even when ``deterministic=False``.
+
+  For continuous control tasks, it is recommended to use deterministic behavior during inference (``deterministic=True``). If you need stochastic behavior during inference, you must manually reset the noise by calling ``model.policy.reset_noise(env.num_envs)`` at appropriate intervals based on your desired ``sde_sample_freq``.
 
 
 Results

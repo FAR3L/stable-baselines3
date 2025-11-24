@@ -6,7 +6,8 @@ import time
 import warnings
 from abc import ABC, abstractmethod
 from collections import deque
-from typing import Any, ClassVar, Dict, Iterable, List, Optional, Tuple, Type, TypeVar, Union
+from collections.abc import Iterable
+from typing import Any, ClassVar, Optional, TypeVar, Union
 
 import gymnasium as gym
 import numpy as np
@@ -24,9 +25,9 @@ from stable_baselines3.common.preprocessing import check_for_nested_spaces, is_i
 from stable_baselines3.common.save_util import load_from_zip_file, recursive_getattr, recursive_setattr, save_to_zip_file
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule, TensorDict
 from stable_baselines3.common.utils import (
+    FloatSchedule,
     check_for_correct_spaces,
     get_device,
-    get_schedule_fn,
     get_system_info,
     set_random_seed,
     update_learning_rate,
@@ -94,7 +95,7 @@ class BaseAlgorithm(ABC):
     """
 
     # Policy aliases (see _get_policy_from_name())
-    policy_aliases: ClassVar[Dict[str, Type[BasePolicy]]] = {}
+    policy_aliases: ClassVar[dict[str, type[BasePolicy]]] = {}
     policy: BasePolicy
     observation_space: spaces.Space
     action_space: spaces.Space
@@ -104,10 +105,10 @@ class BaseAlgorithm(ABC):
 
     def __init__(
         self,
-        policy: Union[str, Type[BasePolicy]],
+        policy: Union[str, type[BasePolicy]],
         env: Union[GymEnv, str, None],
         learning_rate: Union[float, Schedule],
-        policy_kwargs: Optional[Dict[str, Any]] = None,
+        policy_kwargs: Optional[dict[str, Any]] = None,
         stats_window_size: int = 100,
         tensorboard_log: Optional[str] = None,
         verbose: int = 0,
@@ -117,7 +118,7 @@ class BaseAlgorithm(ABC):
         seed: Optional[int] = None,
         use_sde: bool = False,
         sde_sample_freq: int = -1,
-        supported_action_spaces: Optional[Tuple[Type[spaces.Space], ...]] = None,
+        supported_action_spaces: Optional[tuple[type[spaces.Space], ...]] = None,
     ) -> None:
         if isinstance(policy, str):
             self.policy_class = self._get_policy_from_name(policy)
@@ -141,10 +142,10 @@ class BaseAlgorithm(ABC):
         self.start_time = 0.0
         self.learning_rate = learning_rate
         self.tensorboard_log = tensorboard_log
-        self._last_obs = None  # type: Optional[Union[np.ndarray, Dict[str, np.ndarray]]]
+        self._last_obs = None  # type: Optional[Union[np.ndarray, dict[str, np.ndarray]]]
         self._last_episode_starts = None  # type: Optional[np.ndarray]
         # When using VecNormalize:
-        self._last_original_obs = None  # type: Optional[Union[np.ndarray, Dict[str, np.ndarray]]]
+        self._last_original_obs = None  # type: Optional[Union[np.ndarray, dict[str, np.ndarray]]]
         self._episode_num = 0
         # Used for gSDE only
         self.use_sde = use_sde
@@ -272,7 +273,7 @@ class BaseAlgorithm(ABC):
 
     def _setup_lr_schedule(self) -> None:
         """Transform to callable if needed."""
-        self.lr_schedule = get_schedule_fn(self.learning_rate)
+        self.lr_schedule = FloatSchedule(self.learning_rate)
 
     def _update_current_progress_remaining(self, num_timesteps: int, total_timesteps: int) -> None:
         """
@@ -283,7 +284,7 @@ class BaseAlgorithm(ABC):
         """
         self._current_progress_remaining = 1.0 - float(num_timesteps) / float(total_timesteps)
 
-    def _update_learning_rate(self, optimizers: Union[List[th.optim.Optimizer], th.optim.Optimizer]) -> None:
+    def _update_learning_rate(self, optimizers: Union[list[th.optim.Optimizer], th.optim.Optimizer]) -> None:
         """
         Update the optimizers learning rate using the current learning rate schedule
         and the current progress remaining (from 1 to 0).
@@ -299,7 +300,7 @@ class BaseAlgorithm(ABC):
         for optimizer in optimizers:
             update_learning_rate(optimizer, self.lr_schedule(self._current_progress_remaining))
 
-    def _excluded_save_params(self) -> List[str]:
+    def _excluded_save_params(self) -> list[str]:
         """
         Returns the names of the parameters that should be excluded from being
         saved by pickling. E.g. replay buffers are skipped by default
@@ -315,12 +316,11 @@ class BaseAlgorithm(ABC):
             "replay_buffer",
             "rollout_buffer",
             "_vec_normalize_env",
-            "_episode_storage",
             "_logger",
             "_custom_logger",
         ]
 
-    def _get_policy_from_name(self, policy_name: str) -> Type[BasePolicy]:
+    def _get_policy_from_name(self, policy_name: str) -> type[BasePolicy]:
         """
         Get a policy class from its name representation.
 
@@ -337,7 +337,7 @@ class BaseAlgorithm(ABC):
         else:
             raise ValueError(f"Policy {policy_name} unknown")
 
-    def _get_torch_save_params(self) -> Tuple[List[str], List[str]]:
+    def _get_torch_save_params(self) -> tuple[list[str], list[str]]:
         """
         Get the name of the torch variables that will be saved with
         PyTorch ``th.save``, ``th.load`` and ``state_dicts`` instead of the default
@@ -387,7 +387,7 @@ class BaseAlgorithm(ABC):
         reset_num_timesteps: bool = True,
         tb_log_name: str = "run",
         progress_bar: bool = False,
-    ) -> Tuple[int, BaseCallback]:
+    ) -> tuple[int, BaseCallback]:
         """
         Initialize different variables needed for training.
 
@@ -435,7 +435,7 @@ class BaseAlgorithm(ABC):
 
         return total_timesteps, callback
 
-    def _update_info_buffer(self, infos: List[Dict[str, Any]], dones: Optional[np.ndarray] = None) -> None:
+    def _update_info_buffer(self, infos: list[dict[str, Any]], dones: Optional[np.ndarray] = None) -> None:
         """
         Retrieve reward, episode length, episode success and update the buffer
         if using Monitor wrapper or a GoalEnv.
@@ -522,6 +522,7 @@ class BaseAlgorithm(ABC):
         Return a trained model.
 
         :param total_timesteps: The total number of samples (env steps) to train on
+            Note: it is a lower bound, see `issue #1150 <https://github.com/DLR-RM/stable-baselines3/issues/1150>`_
         :param callback: callback(s) called at every step with state of the algorithm.
         :param log_interval: for on-policy algos (e.g., PPO, A2C, ...) this is the number of
             training iterations (i.e., log_interval * n_steps * n_envs timesteps) before logging;
@@ -535,11 +536,11 @@ class BaseAlgorithm(ABC):
 
     def predict(
         self,
-        observation: Union[np.ndarray, Dict[str, np.ndarray]],
-        state: Optional[Tuple[np.ndarray, ...]] = None,
+        observation: Union[np.ndarray, dict[str, np.ndarray]],
+        state: Optional[tuple[np.ndarray, ...]] = None,
         episode_start: Optional[np.ndarray] = None,
         deterministic: bool = False,
-    ) -> Tuple[np.ndarray, Optional[Tuple[np.ndarray, ...]]]:
+    ) -> tuple[np.ndarray, Optional[tuple[np.ndarray, ...]]]:
         """
         Get the policy action from an observation (and optional hidden state).
         Includes sugar-coating to handle different observations (e.g. normalizing images).
@@ -640,11 +641,11 @@ class BaseAlgorithm(ABC):
 
     @classmethod
     def load(  # noqa: C901
-        cls: Type[SelfBaseAlgorithm],
+        cls: type[SelfBaseAlgorithm],
         path: Union[str, pathlib.Path, io.BufferedIOBase],
         env: Optional[GymEnv] = None,
         device: Union[th.device, str] = "auto",
-        custom_objects: Optional[Dict[str, Any]] = None,
+        custom_objects: Optional[dict[str, Any]] = None,
         print_system_info: bool = False,
         force_reset: bool = True,
         **kwargs,
@@ -800,7 +801,7 @@ class BaseAlgorithm(ABC):
             model.policy.reset_noise()  # type: ignore[operator]
         return model
 
-    def get_parameters(self) -> Dict[str, Dict]:
+    def get_parameters(self) -> dict[str, dict]:
         """
         Return the parameters of the agent. This includes parameters from different networks, e.g.
         critics (value functions) and policies (pi functions).
@@ -864,3 +865,13 @@ class BaseAlgorithm(ABC):
         params_to_save = self.get_parameters()
 
         save_to_zip_file(path, data=data, params=params_to_save, pytorch_variables=pytorch_variables)
+
+    def dump_logs(self) -> None:
+        """
+        Write log data. (Implemented by OffPolicyAlgorithm and OnPolicyAlgorithm)
+        """
+        raise NotImplementedError()
+
+    def _dump_logs(self, *args) -> None:
+        warnings.warn("algo._dump_logs() is deprecated in favor of algo.dump_logs(). It will be removed in SB3 v2.7.0")
+        self.dump_logs(*args)

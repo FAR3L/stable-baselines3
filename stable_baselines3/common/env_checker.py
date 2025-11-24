@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 import gymnasium as gym
 import numpy as np
@@ -7,6 +7,18 @@ from gymnasium import spaces
 
 from stable_baselines3.common.preprocessing import check_for_nested_spaces, is_image_space_channels_first
 from stable_baselines3.common.vec_env import DummyVecEnv, VecCheckNan
+
+
+def _is_oneof_space(space: spaces.Space) -> bool:
+    """
+    Return True if the provided space is a OneOf space,
+    False if not or if the current version of Gym doesn't support this space.
+    """
+    try:
+        return isinstance(space, spaces.OneOf)  # type: ignore[attr-defined]
+    except AttributeError:
+        # Gym < v1.0
+        return False
 
 
 def _is_numpy_array_space(space: spaces.Space) -> bool:
@@ -37,7 +49,8 @@ def _check_non_zero_start(space: spaces.Space, space_type: str = "observation", 
         warnings.warn(
             f"{type(space).__name__} {space_type} space {maybe_key} with a non-zero start (start={space.start}) "
             "is not supported by Stable-Baselines3. "
-            f"You can use a wrapper or update your {space_type} space."
+            "You can use a wrapper (see https://stable-baselines3.readthedocs.io/en/master/guide/custom_env.html) "
+            f"or update your {space_type} space."
         )
 
 
@@ -79,14 +92,23 @@ def _check_image_input(observation_space: spaces.Box, key: str = "") -> None:
         )
 
 
-def _check_unsupported_spaces(env: gym.Env, observation_space: spaces.Space, action_space: spaces.Space) -> None:
-    """Emit warnings when the observation space or action space used is not supported by Stable-Baselines."""
+def _check_unsupported_spaces(env: gym.Env, observation_space: spaces.Space, action_space: spaces.Space) -> bool:  # noqa: C901
+    """
+    Emit warnings when the observation space or action space used is not supported by Stable-Baselines.
 
+    :return: True if return value tests should be skipped.
+    """
+
+    should_skip = graph_space = sequence_space = False
     if isinstance(observation_space, spaces.Dict):
         nested_dict = False
         for key, space in observation_space.spaces.items():
             if isinstance(space, spaces.Dict):
                 nested_dict = True
+            elif isinstance(space, spaces.Graph):
+                graph_space = True
+            elif isinstance(space, spaces.Sequence):
+                sequence_space = True
             _check_non_zero_start(space, "observation", key)
 
         if nested_dict:
@@ -114,15 +136,37 @@ def _check_unsupported_spaces(env: gym.Env, observation_space: spaces.Space, act
             "(cf. https://gymnasium.farama.org/api/spaces/composite/#dict). "
             "which is supported by SB3."
         )
+        # Check for Sequence spaces inside Tuple
+        for space in observation_space.spaces:
+            if isinstance(space, spaces.Sequence):
+                sequence_space = True
+            elif isinstance(space, spaces.Graph):
+                graph_space = True
+
+    # Check for Sequence spaces inside OneOf
+    if _is_oneof_space(observation_space):
+        warnings.warn(
+            "OneOf observation space is not supported by Stable-Baselines3. "
+            "Note: The checks for returned values are skipped."
+        )
+        should_skip = True
 
     _check_non_zero_start(observation_space, "observation")
 
-    if isinstance(observation_space, spaces.Sequence):
+    if isinstance(observation_space, spaces.Sequence) or sequence_space:
         warnings.warn(
             "Sequence observation space is not supported by Stable-Baselines3. "
             "You can pad your observation to have a fixed size instead.\n"
             "Note: The checks for returned values are skipped."
         )
+        should_skip = True
+
+    if isinstance(observation_space, spaces.Graph) or graph_space:
+        warnings.warn(
+            "Graph observation space is not supported by Stable-Baselines3. "
+            "Note: The checks for returned values are skipped."
+        )
+        should_skip = True
 
     _check_non_zero_start(action_space, "action")
 
@@ -132,6 +176,7 @@ def _check_unsupported_spaces(env: gym.Env, observation_space: spaces.Space, act
             "This type of action space is currently not supported by Stable Baselines 3. You should try to flatten the "
             "action using a wrapper."
         )
+    return should_skip
 
 
 def _check_nan(env: gym.Env) -> None:
@@ -172,10 +217,10 @@ def _check_goal_env_obs(obs: dict, observation_space: spaces.Dict, method_name: 
 
 
 def _check_goal_env_compute_reward(
-    obs: Dict[str, Union[np.ndarray, int]],
+    obs: dict[str, Union[np.ndarray, int]],
     env: gym.Env,
     reward: float,
-    info: Dict[str, Any],
+    info: dict[str, Any],
 ) -> None:
     """
     Check that reward is computed with `compute_reward`
@@ -444,8 +489,9 @@ def check_env(env: gym.Env, warn: bool = True, skip_render_check: bool = True) -
 
     # Warn the user if needed.
     # A warning means that the environment may run but not work properly with Stable Baselines algorithms
+    should_skip = False
     if warn:
-        _check_unsupported_spaces(env, observation_space, action_space)
+        should_skip = _check_unsupported_spaces(env, observation_space, action_space)
 
         obs_spaces = observation_space.spaces if isinstance(observation_space, spaces.Dict) else {"": observation_space}
         for key, space in obs_spaces.items():
@@ -473,8 +519,8 @@ def check_env(env: gym.Env, warn: bool = True, skip_render_check: bool = True) -
                 f"Your action space has dtype {action_space.dtype}, we recommend using np.float32 to avoid cast errors."
             )
 
-    # If Sequence observation space, do not check the observation any further
-    if isinstance(observation_space, spaces.Sequence):
+    # If Sequence or Graph observation space, do not check the observation any further
+    if should_skip:
         return
 
     # ============ Check the returned values ===============

@@ -3,8 +3,211 @@
 Changelog
 ==========
 
-Release 2.4.0a10 (WIP)
+Release 2.7.1a3 (WIP)
 --------------------------
+
+Breaking Changes:
+^^^^^^^^^^^^^^^^^
+
+New Features:
+^^^^^^^^^^^^^
+- ``RolloutBuffer`` and ``DictRolloutBuffer`` now uses the actual observation / action space ``dtype`` (instead of float32), this should save memory (@Trenza1ore)
+
+Bug Fixes:
+^^^^^^^^^^
+- Fixed env checker to properly handle ``Sequence`` observation spaces when nested inside composite spaces (``Dict``, ``Tuple``, ``OneOf``) (@copilot)
+- Update env checker to warn users when using Graph space (@dhruvmalik007).
+- Fixed memory leak in ``VecVideoRecorder`` where ``recorded_frames`` stayed in memory due to reference in the moviepy clip (@copilot)
+- Remove double space in `StopTrainingOnRewardThreshold` callback message (@sea-bass)
+
+`SB3-Contrib`_
+^^^^^^^^^^^^^^
+
+`RL Zoo`_
+^^^^^^^^^
+
+`SBX`_ (SB3 + Jax)
+^^^^^^^^^^^^^^^^^^
+
+Deprecations:
+^^^^^^^^^^^^^
+
+Others:
+^^^^^^^
+
+Documentation:
+^^^^^^^^^^^^^^
+- Added plotting documentation and examples
+- Added documentation clarifying gSDE (Generalized State-Dependent Exploration) inference behavior for PPO, SAC, and A2C algorithms
+- Documented Atari wrapper reset behavior where ``env.reset()`` may perform a no-op step instead of truly resetting when ``terminal_on_life_loss=True`` (default), and how to avoid this behavior by setting ``terminal_on_life_loss=False``
+- Clarified comment in ``_sample_action()`` method to better explain action scaling behavior for off-policy algorithms (@copilot)
+- Added sb3-plus to projects page
+- Added example usage of ONNX JS
+- Updated link to paper of community project DeepNetSlice (@AlexPasqua)
+- Added example usage of Tensorflow JS
+- Included exact versions in ONNX JS and example project
+- Made step 2 (`pip install`) of `CONTRIBUTING.md` more robust 
+
+
+Release 2.7.0 (2025-07-25)
+--------------------------
+
+**n-step returns for all off-policy algorithms**
+
+Breaking Changes:
+^^^^^^^^^^^^^^^^^
+
+New Features:
+^^^^^^^^^^^^^
+- Added support for n-step returns for off-policy algorithms via the `n_steps` parameter
+- Added ``NStepReplayBuffer`` that allows to compute n-step returns without additional memory requirement (and without for loops)
+- Added Gymnasium v1.2 support
+
+Bug Fixes:
+^^^^^^^^^^
+- Fixed docker GPU image (PyTorch GPU was not installed)
+- Fixed segmentation faults caused by non-portable schedules during model loading (@akanto)
+
+`SB3-Contrib`_
+^^^^^^^^^^^^^^
+- Added support for n-step returns for off-policy algorithms via the `n_steps` parameter
+- Use the ``FloatSchedule`` and ``LinearSchedule`` classes instead of lambdas in the ARS, PPO, and QRDQN implementations to improve model portability across different operating systems
+
+`RL Zoo`_
+^^^^^^^^^
+- `linear_schedule` now returns a `SimpleLinearSchedule` object for better portability
+- Renamed `LunarLander-v2` to `LunarLander-v3` in hyperparameters
+- Renamed `CarRacing-v2` to `CarRacing-v3` in hyperparameters
+- Docker GPU images are now working again
+- Use `ConstantSchedule`, and `SimpleLinearSchedule` instead of `constant_fn` and `linear_schedule`
+- Fixed `CarRacing-v3` hyperparameters for newer Gymnasium version
+
+`SBX`_ (SB3 + Jax)
+^^^^^^^^^^^^^^^^^^
+- Added support for n-step returns for off-policy algorithms via the `n_steps` parameter
+- Added KL Adaptive LR for PPO and LR schedule for SAC/TQC
+
+Deprecations:
+^^^^^^^^^^^^^
+- ``get_schedule_fn()``,  ``get_linear_fn()``,  ``constant_fn()`` are deprecated, please use ``FloatSchedule()``, ``LinearSchedule()``, ``ConstantSchedule()`` instead
+
+Others:
+^^^^^^^
+
+Documentation:
+^^^^^^^^^^^^^^
+- Clarify ``evaluate_policy`` documentation
+- Added doc about training exceeding the `total_timesteps` parameter
+- Updated ``LunarLander`` and ``LunarLanderContinuous`` environment versions to v3 (@j0m0k0)
+- Added sb3-extra-buffers to the project page (@Trenza1ore)
+
+
+Release 2.6.0 (2025-03-24)
+--------------------------
+
+**New ``LogEveryNTimesteps`` callback and ``has_attr`` method, refactored hyperparameter optimization**
+
+Breaking Changes:
+^^^^^^^^^^^^^^^^^
+
+New Features:
+^^^^^^^^^^^^^
+- Added ``has_attr`` method for ``VecEnv`` to check if an attribute exists
+- Added ``LogEveryNTimesteps`` callback to dump logs every N timesteps (note: you need to pass ``log_interval=None`` to avoid any interference)
+- Added Gymnasium v1.1 support
+
+Bug Fixes:
+^^^^^^^^^^
+- `SubProcVecEnv` will now exit gracefully (without big traceback) when using `KeyboardInterrupt`
+
+`SB3-Contrib`_
+^^^^^^^^^^^^^^
+- Renamed ``_dump_logs()`` to ``dump_logs()``
+- Fixed issues with ``SubprocVecEnv`` and ``MaskablePPO`` by using ``vec_env.has_attr()`` (pickling issues, mask function not present)
+
+`RL Zoo`_
+^^^^^^^^^
+- Refactored hyperparameter optimization. The Optuna `Journal storage backend <https://optuna.readthedocs.io/en/stable/reference/generated/optuna.storages.JournalStorage.html>`__ is now supported (recommended default) and you can easily load tuned hyperparameter via the new ``--trial-id`` argument of ``train.py``.
+- Save the exact command line used to launch a training
+- Added support for special vectorized env (e.g. Brax, IsaacSim) by allowing to override the ``VecEnv`` class use to instantiate the env in the ``ExperimentManager``
+- Allow to disable auto-logging by passing ``--log-interval -2`` (useful when logging things manually)
+- Added Gymnasium v1.1 support
+- Fixed use of old HF api in ``get_hf_trained_models()``
+
+`SBX`_ (SB3 + Jax)
+^^^^^^^^^^^^^^^^^^
+- Updated PPO to support ``net_arch``, and additional fixes
+- Fixed entropy coeff wrongly logged for SAC and derivatives.
+- Fixed PPO ``predict()`` for env that were not normalized (action spaces with limits != [-1, 1])
+- PPO now logs the standard deviation
+
+Deprecations:
+^^^^^^^^^^^^^
+- ``algo._dump_logs()`` is deprecated in favor of ``algo.dump_logs()`` and will be removed in SB3 v2.7.0
+
+Others:
+^^^^^^^
+- Updated black from v24 to v25
+- Improved error messages when checking Box space equality (loading ``VecNormalize``)
+- Updated test to reflect how ``set_wrapper_attr`` should be used now
+
+Documentation:
+^^^^^^^^^^^^^^
+- Clarify the use of Gym wrappers with ``make_vec_env`` in the section on Vectorized Environments (@pstahlhofen)
+- Updated callback doc for ``EveryNTimesteps``
+- Added doc on how to set env attributes via ``VecEnv`` calls
+- Added ONNX export example for ``MultiInputPolicy`` (@darkopetrovic)
+
+
+Release 2.5.0 (2025-01-27)
+--------------------------
+
+**New algorithm: SimBa in SBX, NumPy 2.0 support**
+
+
+Breaking Changes:
+^^^^^^^^^^^^^^^^^
+- Increased minimum required version of PyTorch to 2.3.0
+- Removed support for Python 3.8
+
+New Features:
+^^^^^^^^^^^^^
+- Added support for NumPy v2.0: ``VecNormalize`` now cast normalized rewards to float32, updated bit flipping env to avoid overflow issues too
+- Added official support for Python 3.12
+
+`SBX`_ (SB3 + Jax)
+^^^^^^^^^^^^^^^^^^
+- Added SimBa Policy: Simplicity Bias for Scaling Up Parameters in DRL
+- Added support for parameter resets
+
+Others:
+^^^^^^^
+- Updated Dockerfile
+
+Documentation:
+^^^^^^^^^^^^^^
+- Added Decisions and Dragons to resources. (@jmacglashan)
+- Updated PyBullet example, now compatible with Gymnasium
+- Added link to policies for ``policy_kwargs`` parameter (@kplers)
+- Add FootstepNet Envs to the project page (@cgaspard3333)
+- Added FRASA to the project page (@MarcDcls)
+- Fixed atari example (@chrisgao99)
+- Add a note about ``Discrete`` action spaces with ``start!=0``
+- Update doc for massively parallel simulators (Isaac Lab, Brax, ...)
+- Add dm_control example
+
+Release 2.4.1 (2024-12-20)
+--------------------------
+
+Bug Fixes:
+^^^^^^^^^^
+- Fixed a bug introduced in v2.4.0 where the ``VecVideoRecorder`` would override videos
+
+
+Release 2.4.0 (2024-11-18)
+--------------------------
+
+**New algorithm: CrossQ in SB3 Contrib, Gymnasium v1.0 support**
 
 .. note::
 
@@ -16,18 +219,20 @@ Release 2.4.0a10 (WIP)
 .. warning::
 
     Stable-Baselines3 (SB3) v2.4.0 will be the last one supporting Python 3.8 (end of life in October 2024)
-    and PyTorch < 2.0.
-    We highly recommended you to upgrade to Python >= 3.9 and PyTorch >= 2.0.
+    and PyTorch < 2.3.
+    We highly recommended you to upgrade to Python >= 3.9 and PyTorch >= 2.3 (compatible with NumPy v2).
 
 
 Breaking Changes:
 ^^^^^^^^^^^^^^^^^
+- Increased minimum required version of Gymnasium to 0.29.1
 
 New Features:
 ^^^^^^^^^^^^^
 - Added support for ``pre_linear_modules`` and ``post_linear_modules`` in ``create_mlp`` (useful for adding normalization layers, like in DroQ or CrossQ)
 - Enabled np.ndarray logging for TensorBoardOutputFormat as histogram (see GH#1634) (@iwishwasaneagle)
 - Updated env checker to warn users when using multi-dim array to define `MultiDiscrete` spaces
+- Added support for Gymnasium v1.0
 
 Bug Fixes:
 ^^^^^^^^^^
@@ -43,6 +248,10 @@ Bug Fixes:
 
 `SB3-Contrib`_
 ^^^^^^^^^^^^^^
+- Added ``CrossQ`` algorithm, from "Batch Normalization in Deep Reinforcement Learning" paper (@danielpalen)
+- Added ``BatchRenorm`` PyTorch layer used in ``CrossQ`` (@danielpalen)
+- Updated QR-DQN optimizer input to only include quantile_net parameters (@corentinlger)
+- Fixed loading QRDQN changes `target_update_interval` (@jak3122)
 
 `RL Zoo`_
 ^^^^^^^^^
@@ -51,6 +260,7 @@ Bug Fixes:
 `SBX`_ (SB3 + Jax)
 ^^^^^^^^^^^^^^^^^^
 - Added CNN support for DQN
+- Bug fix for SAC and related algorithms, optimize log of ent coeff to be consistent with SB3
 
 Deprecations:
 ^^^^^^^^^^^^^
@@ -61,13 +271,15 @@ Others:
 - Remove unnecessary SDE noise resampling in PPO update (@brn-dev)
 - Updated PyTorch version on CI to 2.3.1
 - Added a warning to recommend using CPU with on policy algorithms (A2C/PPO) and ``MlpPolicy``
-
-Bug Fixes:
-^^^^^^^^^^
+- Switched to uv to download packages faster on GitHub CI
+- Updated dependencies for read the doc
+- Removed unnecessary ``copy_obs_dict`` method for ``SubprocVecEnv``, remove the use of ordered dict and rename ``flatten_obs`` to ``stack_obs``
 
 Documentation:
 ^^^^^^^^^^^^^^
 - Updated PPO doc to recommend using CPU with ``MlpPolicy``
+- Clarified documentation about planned features and citing software
+- Added a note about the fact we are optimizing log of ent coeff for SAC
 
 Release 2.3.2 (2024-04-27)
 --------------------------
@@ -1667,7 +1879,7 @@ Contributors:
 -------------
 In random order...
 
-Thanks to the maintainers of V2: @hill-a @enerijunior @AdamGleave @Miffyli
+Thanks to the maintainers of V2: @hill-a @ernestum @AdamGleave @Miffyli
 
 And all the contributors:
 @taymuur @bjmuld @iambenzo @iandanforth @r7vme @brendenpetersen @huvar @abhiskk @JohannesAck
@@ -1691,4 +1903,4 @@ And all the contributors:
 @DavyMorgan @luizapozzobon @Bonifatius94 @theSquaredError @harveybellini @DavyMorgan @FieteO @jonasreiher @npit @WeberSamuel @troiganto
 @lutogniew @lbergmann1 @lukashass @BertrandDecoster @pseudo-rnd-thoughts @stefanbschneider @kyle-he @PatrickHelm @corentinlger
 @marekm4 @stagoverflow @rushitnshah @markscsmith @NickLucche @cschindlbeck @peteole @jak3122 @will-maclean
-@brn-dev
+@brn-dev @jmacglashan @kplers @MarcDcls @chrisgao99 @pstahlhofen @akanto @Trenza1ore @JonathanColetti

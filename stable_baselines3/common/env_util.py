@@ -1,5 +1,5 @@
 import os
-from typing import Any, Callable, Dict, Optional, Type, Union
+from typing import Any, Callable, Optional, Union
 
 import gymnasium as gym
 
@@ -9,7 +9,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecEnv
 from stable_baselines3.common.vec_env.patch_gym import _patch_env
 
 
-def unwrap_wrapper(env: gym.Env, wrapper_class: Type[gym.Wrapper]) -> Optional[gym.Wrapper]:
+def unwrap_wrapper(env: gym.Env, wrapper_class: type[gym.Wrapper]) -> Optional[gym.Wrapper]:
     """
     Retrieve a ``VecEnvWrapper`` object by recursively searching.
 
@@ -25,7 +25,7 @@ def unwrap_wrapper(env: gym.Env, wrapper_class: Type[gym.Wrapper]) -> Optional[g
     return None
 
 
-def is_wrapped(env: gym.Env, wrapper_class: Type[gym.Wrapper]) -> bool:
+def is_wrapped(env: gym.Env, wrapper_class: type[gym.Wrapper]) -> bool:
     """
     Check if a given environment has been wrapped with a given wrapper.
 
@@ -43,11 +43,11 @@ def make_vec_env(
     start_index: int = 0,
     monitor_dir: Optional[str] = None,
     wrapper_class: Optional[Callable[[gym.Env], gym.Env]] = None,
-    env_kwargs: Optional[Dict[str, Any]] = None,
-    vec_env_cls: Optional[Type[Union[DummyVecEnv, SubprocVecEnv]]] = None,
-    vec_env_kwargs: Optional[Dict[str, Any]] = None,
-    monitor_kwargs: Optional[Dict[str, Any]] = None,
-    wrapper_kwargs: Optional[Dict[str, Any]] = None,
+    env_kwargs: Optional[dict[str, Any]] = None,
+    vec_env_cls: Optional[type[Union[DummyVecEnv, SubprocVecEnv]]] = None,
+    vec_env_kwargs: Optional[dict[str, Any]] = None,
+    monitor_kwargs: Optional[dict[str, Any]] = None,
+    wrapper_kwargs: Optional[dict[str, Any]] = None,
 ) -> VecEnv:
     """
     Create a wrapped, monitored ``VecEnv``.
@@ -134,15 +134,21 @@ def make_atari_env(
     seed: Optional[int] = None,
     start_index: int = 0,
     monitor_dir: Optional[str] = None,
-    wrapper_kwargs: Optional[Dict[str, Any]] = None,
-    env_kwargs: Optional[Dict[str, Any]] = None,
-    vec_env_cls: Optional[Union[Type[DummyVecEnv], Type[SubprocVecEnv]]] = None,
-    vec_env_kwargs: Optional[Dict[str, Any]] = None,
-    monitor_kwargs: Optional[Dict[str, Any]] = None,
+    wrapper_kwargs: Optional[dict[str, Any]] = None,
+    env_kwargs: Optional[dict[str, Any]] = None,
+    vec_env_cls: Optional[Union[type[DummyVecEnv], type[SubprocVecEnv]]] = None,
+    vec_env_kwargs: Optional[dict[str, Any]] = None,
+    monitor_kwargs: Optional[dict[str, Any]] = None,
 ) -> VecEnv:
     """
     Create a wrapped, monitored VecEnv for Atari.
     It is a wrapper around ``make_vec_env`` that includes common preprocessing for Atari games.
+
+    .. note::
+        By default, the ``AtariWrapper`` uses ``terminal_on_life_loss=True``, which causes
+        ``env.reset()`` to perform a no-op step instead of truly resetting when the environment
+        terminates due to a loss of life (but not game over). To ensure ``reset()`` always
+        resets the env, pass ``wrapper_kwargs=dict(terminal_on_life_loss=False)``.
 
     :param env_id: either the env ID, the env class or a callable returning an env
     :param n_envs: the number of environments you wish to have in parallel

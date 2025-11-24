@@ -148,6 +148,9 @@ Consider the following example for a custom env:
 	print(vec_env.env_method("get_wrapper_attr", "mu"))
 	# Change `mu` attribute via the setter
 	vec_env.env_method("set_mu", "mu", 0.1)
+	# If the variable exists, you can also use `set_wrapper_attr` to set it
+	assert vec_env.has_attr("mu")
+	vec_env.env_method("set_wrapper_attr", "mu", 0.1)
 
 
 In this example ``env.mu`` cannot be accessed/changed directly because it is wrapped in a ``VecEnv`` and because it could be wrapped with other wrappers (see `GH#1573 <https://github.com/DLR-RM/stable-baselines3/issues/1573>`_ for a longer explanation).
@@ -223,6 +226,26 @@ You can find below an example for extracting one key from the observation:
 	env = DummyVecEnv([lambda: gym.make("FetchReach-v1")])
 	# Wrap the VecEnv
 	env = VecExtractDictObs(env, key="observation")
+
+
+.. note::
+   When creating a vectorized environment, you can also specify ordinary gymnasium
+   wrappers to wrap each of the sub-environments. See the
+   :func:`make_vec_env <stable_baselines3.common.env_util.make_vec_env>`
+   documentation for details.
+   Example:
+
+   .. code-block:: python
+
+    from gymnasium.wrappers import RescaleAction
+    from stable_baselines3.common.env_util import make_vec_env
+
+    # Use gym wrapper for each sub-env of the VecEnv
+    wrapper_kwargs = dict(min_action=-1.0, max_action=1.0)
+    vec_env = make_vec_env(
+        "Pendulum-v1", n_envs=2, wrapper_class=RescaleAction, wrapper_kwargs=wrapper_kwargs
+    )
+
 
 
 VecEnv

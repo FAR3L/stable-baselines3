@@ -1,6 +1,7 @@
 import os
 import shutil
 
+import ale_py
 import gymnasium as gym
 import numpy as np
 import pytest
@@ -15,14 +16,22 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.noise import OrnsteinUhlenbeckActionNoise, VectorizedActionNoise
 from stable_baselines3.common.utils import (
+    ConstantSchedule,
+    FloatSchedule,
+    LinearSchedule,
     check_shape_equal,
+    constant_fn,
+    get_linear_fn,
     get_parameters_by_name,
+    get_schedule_fn,
     get_system_info,
     is_vectorized_observation,
     polyak_update,
     zip_strict,
 )
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
+
+gym.register_envs(ale_py)
 
 
 @pytest.mark.parametrize("env_id", ["CartPole-v1", lambda: gym.make("CartPole-v1")])
@@ -177,7 +186,7 @@ def test_custom_vec_env(tmp_path):
 
 
 @pytest.mark.parametrize("direct_policy", [False, True])
-def test_evaluate_policy(direct_policy: bool):
+def test_evaluate_policy(direct_policy):
     model = A2C("MlpPolicy", "Pendulum-v1", seed=0)
     n_steps_per_episode, n_eval_episodes = 200, 2
 
@@ -331,15 +340,13 @@ def test_evaluate_policy_monitors(vec_env_class):
     # Test that we also track correct episode dones, not the wrapped ones.
     # Sanity check that we get only one step per episode.
     eval_env = make_eval_env(with_monitor=False, wrapper_class=AlwaysDoneWrapper)
-    episode_rewards, episode_lengths = evaluate_policy(
-        model, eval_env, n_eval_episodes, return_episode_rewards=True, warn=False
-    )
+    _, episode_lengths = evaluate_policy(model, eval_env, n_eval_episodes, return_episode_rewards=True, warn=False)
     assert all(map(lambda length: length == 1, episode_lengths)), "AlwaysDoneWrapper did not fix episode lengths to one"
     eval_env.close()
 
     # Should get longer episodes with with Monitor (true episodes)
     eval_env = make_eval_env(with_monitor=True, wrapper_class=AlwaysDoneWrapper)
-    episode_rewards, episode_lengths = evaluate_policy(model, eval_env, n_eval_episodes, return_episode_rewards=True)
+    _, episode_lengths = evaluate_policy(model, eval_env, n_eval_episodes, return_episode_rewards=True)
     assert all(map(lambda length: length > 1, episode_lengths)), "evaluate_policy did not get episode lengths from Monitor"
     eval_env.close()
 
@@ -590,3 +597,34 @@ def test_check_shape_equal():
     space2 = spaces.Dict({"key1": spaces.Box(low=-1, high=2, shape=(3, 3)), "key2": spaces.Box(low=-1, high=2, shape=(2, 2))})
     with pytest.raises(AssertionError):
         check_shape_equal(space1, space2)
+
+
+def test_deprecated_schedules():
+    with pytest.warns(Warning):
+        get_schedule_fn(0.1)
+        get_schedule_fn(lambda _: 0.1)
+    with pytest.warns(Warning):
+        linear_fn = get_linear_fn(1.0, 0.0, 0.1)
+        linear_schedule = LinearSchedule(1.0, 0.0, 0.1)
+        float_schedule = FloatSchedule(linear_schedule)
+        assert np.allclose(linear_fn(0.95), 0.5)
+        assert np.allclose(linear_fn(0.95), linear_schedule(0.95))
+        assert np.allclose(linear_fn(0.95), float_schedule(0.95))
+        assert np.allclose(linear_fn(0.9), 0.0)
+        assert np.allclose(linear_fn(0.0), 0.0)
+        assert np.allclose(linear_fn(0.9), linear_schedule(0.9))
+        assert np.allclose(linear_fn(0.9), float_schedule(0.9))
+    with pytest.warns(Warning):
+        fn = constant_fn(1.0)
+        schedule = ConstantSchedule(1.0)
+        float_schedule = FloatSchedule(1.0)
+        float_schedule_2 = FloatSchedule(float_schedule)
+        assert id(float_schedule_2.value_schedule) == id(float_schedule.value_schedule)
+        assert np.allclose(fn(0.0), 1.0)
+        assert np.allclose(fn(0.0), schedule(0.0))
+        assert np.allclose(fn(0.0), float_schedule(0.0))
+        assert np.allclose(fn(0.0), float_schedule_2(0.0))
+        assert np.allclose(fn(0.5), 1.0)
+        assert np.allclose(fn(0.5), schedule(0.5))
+        assert np.allclose(fn(0.5), float_schedule(0.5))
+        assert np.allclose(fn(0.5), float_schedule_2(0.5))

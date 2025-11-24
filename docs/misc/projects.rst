@@ -228,7 +228,8 @@ intelligent agents to perform network slice placement.
 
 | Author: Alex Pasquali
 | Github: https://github.com/AlexPasqua/DeepNetSlice
-| Paper: **under review** (citation instructions on the project's README.md) -> see this Master's Thesis for the moment: https://etd.adm.unipi.it/theses/available/etd-01182023-110038/unrestricted/Tesi_magistrale_Pasquali_Alex.pdf
+| Paper: https://ieeexplore.ieee.org/document/10625023
+| Associated Master's Thesis: https://etd.adm.unipi.it/theses/available/etd-01182023-110038/unrestricted/Tesi_magistrale_Pasquali_Alex.pdf
 
 
 PokemonRedExperiments
@@ -250,3 +251,58 @@ It enables solving environments involving partial observability or locomotion (e
 | Authors: Corentin Léger, Gautier Hamon, Eleni Nisioti, Xavier Hinaut, Clément Moulin-Frier
 | Github: https://github.com/corentinlger/ER-MRL
 | Paper: https://arxiv.org/abs/2312.06695
+
+FootstepNet Envs
+----------------
+
+These environments are dedicated to train efficient agents that can plan and forecast bipedal robot footsteps in order to go to a target location possibly avoiding obstacles. They are designed to be used with Reinforcement Learning (RL) algorithms.
+
+Real world experiments were conducted during RoboCup competitions on the Sigmaban robot, a small-sized humanoid designed by the *Rhoban Team*.
+
+| Authors: Clément Gaspard, Grégoire Passault, Mélodie Daniel, Olivier Ly
+| Github: https://github.com/Rhoban/footstepnet_envs
+| Paper: https://arxiv.org/abs/2403.12589
+
+
+FRASA: Fall Recovery And Stand up agent
+---------------------------------------
+
+A Deep Reinforcement Learning agent for a humanoid robot that learns to recover from falls and stand up. 
+
+The agent is trained using the MuJoCo physics engine. Real world experiments are conducted on the 
+Sigmaban humanoid robot, a small-sized humanoid designed by the *Rhoban Team* to compete in the RoboCup Kidsize League.
+The results, detailed in the paper and the video, show that the agent is able to recover from 
+various external disturbances and stand up in a few seconds.
+
+| Authors: Marc Duclusaud, Clément Gaspard, Grégoire Passault, Mélodie Daniel, Olivier Ly
+| Github: https://github.com/Rhoban/frasa
+| Paper: https://arxiv.org/abs/2410.08655
+| Video: https://www.youtube.com/watch?v=NL65XW0O0mk
+
+
+sb3-extra-buffers: RAM expansions are overrated, just compress your observations!
+------------------------------------------------------------------------------------
+
+Reduce the memory consumption of memory buffers in Reinforcement Learning while adding minimal overhead.
+
+Tired of reading a cool RL paper and realizing that the author is storing a **MILLION** observations in their replay buffers? Yeah me too. 
+This project has implemented several compressed buffer classes that replace Stable Baselines3's standard buffers like ReplayBuffer and 
+RolloutBuffer. With as simple as 2-5 lines of extra code and **negligible overhead**, memory usage can be reduced by more than **95%**!
+Benchmark results and documentations are on Github, feel free to submit feature requests / ask how to use these buffers through issues.
+
+| Authors: Hugo Huang
+| Github: https://github.com/Trenza1ore/sb3-extra-buffers
+| Relevant project for training RL agents that play Doom with Semantic Segmentation: https://github.com/Trenza1ore/SegDoom
+
+
+sb3-plus: Multi-Output Policy Support for Stable-Baselines3
+-----------------------------------------------------------
+
+An extension to Stable-Baselines3 that implements support for multi-output policies and dictionary action spaces.
+
+This project provides PPO with dict action space support, enabling independent action spaces which is particularly useful 
+for environments requiring multiple types of actions (e.g., discrete and continuous actions). This addresses the 
+multi-output policy feature requested in the community and provides a practical solution for complex action scenarios.
+
+| Author: Adyson Maia
+| Github: https://github.com/adysonmaia/sb3-plus

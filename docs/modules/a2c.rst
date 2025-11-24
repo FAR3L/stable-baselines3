@@ -78,7 +78,7 @@ Train a A2C agent on ``CartPole-v1`` using 4 environments.
 
   A2C is meant to be run primarily on the CPU, especially when you are not using a CNN. To improve CPU utilization, try turning off the GPU and using ``SubprocVecEnv`` instead of the default ``DummyVecEnv``:
 
-  .. code-block::
+  .. code-block:: python
 
     from stable_baselines3 import A2C
     from stable_baselines3.common.env_util import make_vec_env
@@ -88,8 +88,16 @@ Train a A2C agent on ``CartPole-v1`` using 4 environments.
         env = make_vec_env("CartPole-v1", n_envs=8, vec_env_cls=SubprocVecEnv)
         model = A2C("MlpPolicy", env, device="cpu")
         model.learn(total_timesteps=25_000)
-  
+
   For more information, see :ref:`Vectorized Environments <vec_env>`, `Issue #1245 <https://github.com/DLR-RM/stable-baselines3/issues/1245>`_ or the `Multiprocessing notebook <https://colab.research.google.com/github/Stable-Baselines-Team/rl-colab-notebooks/blob/sb3/multiprocessing_rl.ipynb>`_.
+
+.. note::
+
+  Using gSDE (Generalized State-Dependent Exploration) during inference (see `PR #1767 <https://github.com/DLR-RM/stable-baselines3/pull/1767>`_):
+
+  When using A2C models trained with ``use_sde=True``, the automatic noise resetting that occurs during training (controlled by ``sde_sample_freq``) does not happen when using ``model.predict()`` for inference. This results in deterministic behavior even when ``deterministic=False``.
+
+  For continuous control tasks, it is recommended to use deterministic behavior during inference (``deterministic=True``). If you need stochastic behavior during inference, you must manually reset the noise by calling ``model.policy.reset_noise(env.num_envs)`` at appropriate intervals based on your desired ``sde_sample_freq``.
 
 
 Results
@@ -164,6 +172,8 @@ Parameters
   :members:
   :inherited-members:
 
+
+.. _a2c_policies:
 
 A2C Policies
 -------------
